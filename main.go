@@ -367,7 +367,7 @@ func importOptions(host string, port int, user, password string, dupDB string) [
 }
 
 func modifyConfig(cfg Config) error {
-	options := sshOptions(cfg.ProdConfig.Port, cfg.ProdConfig.User, cfg.ProdConfig.Host)
+	options := sshOptions(cfg.SSHConfig.Port, cfg.SSHConfig.User, cfg.SSHConfig.Host)
 	cmd := exec.Command(SSH, options...)
 	log.Println(cmd.Args)
 	stdin, err := cmd.StdinPipe()
