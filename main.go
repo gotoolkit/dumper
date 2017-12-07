@@ -228,7 +228,6 @@ func syncUploads(cfg Config) error {
 
 func syncOptions(cfg Config) []string {
 	var options []string
-	options = append(options, fmt.Sprintf(`-e "ssh -p %d"`, cfg.RsyncConfig.DestPort))
 	src := fmt.Sprintf("%s", cfg.RsyncConfig.SrcPath)
 	dest := fmt.Sprintf("%s:%s", "gfs", cfg.RsyncConfig.DestPath)
 	options = append(options, "-azvh")
