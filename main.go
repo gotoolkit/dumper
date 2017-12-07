@@ -23,6 +23,7 @@ type RsyncConfig struct {
 	DestPath string `json:"dest_path"`
 	DestUser string `json:"dest_user"`
 	DestHost string `json:"dest_host"`
+	DestPort int `json:"dest_port"`
 }
 
 type StagingConfig struct {
@@ -226,8 +227,8 @@ func syncUploads(cfg Config) error {
 
 func syncOptions(cfg Config) []string {
 	var options []string
-	// src := fmt.Sprintf("%s@%s:%s/", cfg.RsyncConfig.SrcUser, cfg.RsyncConfig.SrcHost, cfg.RsyncConfig.SrcPath)
-	src := fmt.Sprintf("%s", cfg.RsyncConfig.SrcPath)
+	options = append(options, fmt.Sprintf(`-e "ssh -p %d"`, cfg.RsyncConfig.DestPort))
+	src := fmt.Sprintf("%s@%s:%s", cfg.RsyncConfig.SrcUser, cfg.RsyncConfig.SrcHost, cfg.RsyncConfig.SrcPath)
 	dest := fmt.Sprintf("%s@%s:%s", cfg.RsyncConfig.DestUser, cfg.RsyncConfig.DestHost, cfg.RsyncConfig.DestPath)
 	options = append(options, "-azvh")
 	options = append(options, src)
@@ -392,7 +393,7 @@ func cc(port int, user, host string) error {
 	stdin, err := cmd.StdinPipe()
 	go func() {
 		defer stdin.Close()
-		io.WriteString(stdin, `/usr/local/bin/php -d memory_limit=-1 /symfony/app/console cache:clear --env=prod && chmod -R 777 /symfony/app/logs /symfony/app/cache`)
+		io.WriteString(stdin, `/usr/local/bin/php -d memory_limit=-1 /symfony/app/console cache:clear --env=prod && chmod -R 777 /symfony/app/logs /symfony/app/cache /symfony/web/uploads`)
 	}()
 
 	data, err := cmd.CombinedOutput()
