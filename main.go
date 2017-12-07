@@ -220,7 +220,7 @@ func syncUploads(cfg Config) error {
 	log.Println(cmd.Args)
 	data, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Println(data)
+		log.Println(string(data))
 		return err
 	}
 	return nil
