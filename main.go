@@ -218,8 +218,9 @@ func syncUploads(cfg Config) error {
 	options := syncOptions(cfg)
 	cmd := exec.Command(Rsync, options...)
 	log.Println(cmd.Args)
-	err := cmd.Run()
+	data, err := cmd.CombinedOutput()
 	if err != nil {
+		log.Println(data)
 		return err
 	}
 	return nil
