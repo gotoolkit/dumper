@@ -12,6 +12,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/gotoolkit/synchronizer/rsync"
 	"github.com/pkg/errors"
 	"github.com/satori/go.uuid"
 )
@@ -218,12 +219,18 @@ func syncUploads(cfg Config) error {
 	if cfg.RsyncConfig.DestPort > 0 {
 		port = cfg.RsyncConfig.DestPort
 	}
-	return Rsync(&RsyncOptions{
-		Src:   fmt.Sprintf("%s", cfg.RsyncConfig.SrcPath),
-		Dest:  fmt.Sprintf("%s@%s:%s", cfg.RsyncConfig.DestUser, cfg.RsyncConfig.DestHost, cfg.RsyncConfig.DestPath),
-		Rsh:   fmt.Sprintf("ssh -p %d", port),
-		Debug: true,
-	})
+	options := &rsync.Options{
+		Src:  fmt.Sprintf("%s", cfg.RsyncConfig.SrcPath),
+		Dest: fmt.Sprintf("%s@%s:%s", cfg.RsyncConfig.DestUser, cfg.RsyncConfig.DestHost, cfg.RsyncConfig.DestPath),
+		Rsh:  fmt.Sprintf("ssh -p %d", port),
+	}
+	rsync.DebugMode()
+	ot, err := rsync.NewCommand(options).Output()
+	if err != nil {
+		log.Println(ot)
+		return err
+	}
+	return nil
 }
 
 func dumpStagingMysql(cfg Config) (string, error) {

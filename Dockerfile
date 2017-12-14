@@ -1,6 +1,6 @@
 FROM containerize/dep AS builder
 
-WORKDIR /go/src/gotoolkit/synchronizer
+WORKDIR /go/src/github.com/gotoolkit/synchronizer
 
 COPY Gopkg.toml Gopkg.lock ./
 RUN dep ensure -vendor-only
