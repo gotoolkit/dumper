@@ -23,7 +23,7 @@ type RsyncConfig struct {
 	DestPath string `json:"dest_path"`
 	DestUser string `json:"dest_user"`
 	DestHost string `json:"dest_host"`
-	DestPort int `json:"dest_port"`
+	DestPort int    `json:"dest_port"`
 }
 
 type StagingConfig struct {
@@ -215,25 +215,12 @@ func startTask(dumper *mysql, cfg Config) {
 }
 
 func syncUploads(cfg Config) error {
-	options := syncOptions(cfg)
-	cmd := exec.Command(Rsync, options...)
-	log.Println(cmd.Args)
-	data, err := cmd.CombinedOutput()
-	if err != nil {
-		log.Println(string(data))
-		return err
-	}
-	return nil
-}
-
-func syncOptions(cfg Config) []string {
-	var options []string
-	src := fmt.Sprintf("%s", cfg.RsyncConfig.SrcPath)
-	dest := fmt.Sprintf("%s:%s", "gfs", cfg.RsyncConfig.DestPath)
-	options = append(options, "-azvh")
-	options = append(options, src)
-	options = append(options, dest)
-	return options
+	return Rsync(&RsyncOptions{
+		Src:   fmt.Sprintf("%s", cfg.RsyncConfig.SrcPath),
+		Dest:  fmt.Sprintf("%s@%s:%s", cfg.RsyncConfig.DestUser, cfg.RsyncConfig.DestHost, cfg.RsyncConfig.DestPath),
+		Rsh:   fmt.Sprintf("ssh -p %d", cfg.RsyncConfig.DestPort),
+		Debug: true,
+	})
 }
 
 func dumpStagingMysql(cfg Config) (string, error) {
