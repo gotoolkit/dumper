@@ -64,7 +64,6 @@ type Config struct {
 }
 
 var (
-	Rsync     = "rsync"
 	MysqlDump = "mysqldump"
 	Sed       = "sed"
 	Mysql     = "/usr/bin/mysql"
@@ -215,10 +214,14 @@ func startTask(dumper *mysql, cfg Config) {
 }
 
 func syncUploads(cfg Config) error {
+	port := 22
+	if cfg.RsyncConfig.DestPort > 0 {
+		port = cfg.RsyncConfig.DestPort
+	}
 	return Rsync(&RsyncOptions{
 		Src:   fmt.Sprintf("%s", cfg.RsyncConfig.SrcPath),
 		Dest:  fmt.Sprintf("%s@%s:%s", cfg.RsyncConfig.DestUser, cfg.RsyncConfig.DestHost, cfg.RsyncConfig.DestPath),
-		Rsh:   fmt.Sprintf("ssh -p %d", cfg.RsyncConfig.DestPort),
+		Rsh:   fmt.Sprintf("ssh -p %d", port),
 		Debug: true,
 	})
 }

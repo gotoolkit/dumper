@@ -1,6 +1,6 @@
 FROM containerize/dep AS builder
 
-WORKDIR /go/src/dumper
+WORKDIR /go/src/gotoolkit/synchronizer
 
 COPY Gopkg.toml Gopkg.lock ./
 RUN dep ensure -vendor-only
@@ -12,9 +12,9 @@ RUN go install .
 FROM containerize/ssh:alpine
 RUN apk add --no-cache ca-certificates mysql-client
 COPY entrypoint.sh /usr/local/bin/
-COPY --from=builder /go/bin/dumper /usr/local/bin/dumper
+COPY --from=builder /go/bin/synchronizer /usr/local/bin/synchronizer
 
-WORKDIR /home/dumper
+WORKDIR /home/synchronizer
 
 ENTRYPOINT [ "entrypoint.sh" ]
-CMD ["dumper"]
+CMD ["synchronizer"]
