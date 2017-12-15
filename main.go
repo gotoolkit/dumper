@@ -23,7 +23,7 @@ type RsyncConfig struct {
 	DestPath string `json:"dest_path"`
 	DestUser string `json:"dest_user"`
 	DestHost string `json:"dest_host"`
-	DestPort int `json:"dest_port"`
+	DestPort int    `json:"dest_port"`
 }
 
 type StagingConfig struct {
@@ -113,102 +113,102 @@ func setup(cfg Config) (uuid.UUID, error) {
 func startTask(dumper *mysql, cfg Config) {
 	defer dumper.Close()
 	// start sync
-	dumper.UpdateStatus(fmt.Sprintf("Start Sync uploads folder"), StateProc)
+	dumper.UpdateStatus(fmt.Sprintf("Rsync uploads folder from [staging] to [%s]", cfg.ProdConfig.Host), StateProc)
 
 	if !cfg.SkipRsync {
 		err := syncUploads(cfg)
 		if err != nil {
-			dumper.UpdateStatus(fmt.Sprintf("Sync uploads folder failed: %v", err), StateError)
+			dumper.UpdateStatus(fmt.Sprintf("Error: rsync uploads folder from [staging] to [%s]: %v", cfg.ProdConfig.Host, err), StateError)
 			return
 		}
 	} else {
-		dumper.UpdateStatus(fmt.Sprint("Skip Sync uploads folder"), StateProc)
+		dumper.UpdateStatus(fmt.Sprintf("Skip rsync uploads folder from [staging] to [%s]", cfg.ProdConfig.Host), StateProc)
 	}
 
 	// dumping staging db
-	dumper.UpdateStatus(fmt.Sprintf("Start dumping staging mysql: %s/%s", cfg.StagingConfig.Host, cfg.StagingConfig.Database), StateProc)
+	dumper.UpdateStatus(fmt.Sprintf("Mysqldump [staging] mysql database: %s\t tables: %v", cfg.StagingConfig.Database, cfg.StagingConfig.Tables), StateProc)
 
 	stagingOutput, err := dumpStagingMysql(cfg)
 	if err != nil {
-		dumper.UpdateStatus(fmt.Sprintf("dumping staging mysql failed: %v", err), StateError)
+		dumper.UpdateStatus(fmt.Sprintf("Error: mysqldump [staging] mysql database: %v", err), StateError)
 		return
 	}
 	dumper.UpdateStagingPath(stagingOutput)
-	dumper.UpdateStatus(fmt.Sprintf("finish dumping staging mysql: %s", stagingOutput), StateProc)
+	dumper.UpdateStatus(fmt.Sprintf("Completed: Mysqldump [staging] mysql: %s", stagingOutput), StateProc)
 
 	// dumping prod db
-	dumper.UpdateStatus(fmt.Sprintf("Start dumping prod mysql: %s/%s", cfg.ProdConfig.Host, cfg.ProdConfig.Database), StateProc)
+	dumper.UpdateStatus(fmt.Sprintf("Mysqldump [%s] mysql database: %s", cfg.ProdConfig.Host, cfg.ProdConfig.Database), StateProc)
 	prodOutput, err := dumpProdMysql(cfg)
 	if err != nil {
-		dumper.UpdateStatus(fmt.Sprintf("dumping prod mysql failed: %v", err), StateError)
+		dumper.UpdateStatus(fmt.Sprintf("Error: mysqldump [%s] mysql database: %v", cfg.ProdConfig.Host, err), StateError)
 		return
 	}
 	dumper.UpdateProdPath(prodOutput)
 	dumper.UpdateStatus(fmt.Sprintf("finish dumping prod mysql: %s", prodOutput), StateProc)
 
 	// duplicate prod db
-	dumper.UpdateStatus(fmt.Sprintf("Start duplicate prod mysql database: %s/%s", cfg.ProdConfig.Host, cfg.ProdConfig.Database), StateProc)
+	dumper.UpdateStatus(fmt.Sprintf("Duplicate [%s] mysql database: %s", cfg.ProdConfig.Host, cfg.ProdConfig.Database), StateProc)
 	err = copyProdMysql(cfg, dumper.ProdOutput, dumper.StagingOutput)
 	if err != nil {
-		dumper.UpdateStatus(fmt.Sprintf("duplicate prod mysql database failed: %v", err), StateError)
+		dumper.UpdateStatus(fmt.Sprintf("Error: duplicate [%s] mysql database: %v", cfg.ProdConfig.Host, err), StateError)
 		return
 	}
 
 	// insert to prod duplicate db
-	dumper.UpdateStatus(fmt.Sprintf("Start insert prod mysql: %s/%s", cfg.ProdConfig.Host, cfg.ProdConfig.Database), StateProc)
+	dumper.UpdateStatus(fmt.Sprintf("Insert [%s] mysql database: %s", cfg.ProdConfig.Host, cfg.ProdConfig.Database), StateProc)
 
 	err = importMysql(cfg, prodOutput, stagingOutput)
 	if err != nil {
-		dumper.UpdateStatus(fmt.Sprintf("insert prod mysql failed: %v", err), StateError)
+		dumper.UpdateStatus(fmt.Sprintf("Error: insert [%s] mysql database: %v", cfg.ProdConfig.Host, err), StateError)
 		return
 	}
 
 	// modify config
-	dumper.UpdateStatus(fmt.Sprint("Start modify config"), StateProc)
+	dumper.UpdateStatus(fmt.Sprint("Update system database parameter"), StateProc)
 	if !cfg.SkipSed {
 
 		err = modifyConfig(cfg)
 		if err != nil {
-			dumper.UpdateStatus(fmt.Sprintf("Modify config failed: %v", err), StateError)
+			dumper.UpdateStatus(fmt.Sprintf("Error: update system database parameter: %v", err), StateError)
 			return
 		}
 	} else {
-		dumper.UpdateStatus(fmt.Sprint("Skip modify config "), StateProc)
+		dumper.UpdateStatus(fmt.Sprint("Skip update system database parameter"), StateProc)
 	}
 
 	// start cc
 
-	dumper.UpdateStatus(fmt.Sprint("Start cc1"), StateProc)
+	dumper.UpdateStatus(fmt.Sprint("[node1] clean cache"), StateProc)
 	if !cfg.SkipCC {
 		err = cc(1022, "root", "srv1.cc")
 		if err != nil {
-			dumper.UpdateStatus(fmt.Sprintf("cc1 failed: %v", err), StateError)
+			dumper.UpdateStatus(fmt.Sprintf("Error: [node1] clean cache: %v", err), StateError)
 			return
 		}
 	} else {
-		dumper.UpdateStatus(fmt.Sprint("Skip cc1"), StateProc)
+		dumper.UpdateStatus(fmt.Sprint("Skip: [node1] clean cache"), StateProc)
 	}
 
-	dumper.UpdateStatus(fmt.Sprint("Start cc2"), StateProc)
+	dumper.UpdateStatus(fmt.Sprint("[node2] clean cache"), StateProc)
 	if !cfg.SkipCC {
 		err = cc(1022, "root", "srv2.cc")
 		if err != nil {
-			dumper.UpdateStatus(fmt.Sprintf("cc2 failed: %v", err), StateError)
+			dumper.UpdateStatus(fmt.Sprintf("Error: [node2] clean cache: %v", err), StateError)
 			return
 		}
 	} else {
-		dumper.UpdateStatus(fmt.Sprint("Skip cc2"), StateProc)
+		dumper.UpdateStatus(fmt.Sprint("Skip: [node2] clean cache"), StateProc)
 	}
 
-	dumper.UpdateStatus(fmt.Sprint("Start cc3"), StateProc)
+	dumper.UpdateStatus(fmt.Sprint("[node3] clean cache"), StateProc)
 	if !cfg.SkipCC {
 		err = cc(1022, "root", "srv3.cc")
 		if err != nil {
-			dumper.UpdateStatus(fmt.Sprintf("cc3 failed: %v", err), StateError)
+			dumper.UpdateStatus(fmt.Sprintf("Error: [node3] clean cache: %v", err), StateError)
 			return
 		}
 	} else {
-		dumper.UpdateStatus(fmt.Sprint("Skip cc3"), StateProc)
+		dumper.UpdateStatus(fmt.Sprint("Skip: [node3] clean cache"), StateProc)
 	}
 
 	dumper.UpdateStatus(fmt.Sprint("Task completed"), StateDone)
